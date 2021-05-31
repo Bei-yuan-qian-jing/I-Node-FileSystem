@@ -24,15 +24,23 @@ int findFile_INode(long p, char name[]) {
 }
 
 int findFreeINode() {
+    int freeINodeIndex = 0;
     for (int i = 0; i < disk[1].super_block->total_data_block; i++)
-        if (disk[2].i_node_bit_map->inode_bit_map[i] == false)
-            return i + disk[1].super_block->first_inode_block;
+        if (disk[2].i_node_bit_map->inode_bit_map[i] == false) {
+            freeINodeIndex = i + disk[1].super_block->first_inode_block;
+            break;
+        }
+    return freeINodeIndex;
 }
 
 int findFreeDataBlock() {
+    int freeDataBlockIndex = 0;
     for (int i = 0; i < disk[1].super_block->total_data_block; i++)
-        if (disk[3].data_bit_map->data_bit_map[i] == false)
-            return i + systemUsed;
+        if (disk[3].data_bit_map->data_bit_map[i] == false) {
+            freeDataBlockIndex = i + systemUsed;
+            break;
+        }
+    return freeDataBlockIndex;
 }
 
 DIRECTORY_BLOCK* newDirectory() {
@@ -105,8 +113,8 @@ void make_inDir(INDIRECT_ADDR_BLOCK* p,
         disk[temp].data = new DATA_BLOCK;
         memset(disk[temp].data->content, 0, 1024);
         totalBlocks--;
-        if (used_Blocks > 0)  // copy the file content into the new space;
-        {
+        if (used_Blocks > 0) {
+            // copy the file content into the new space;
             used_Blocks--;
             strncpy(disk[temp].data->content, filecontent, 1024);
             filecontent += 1024;
@@ -312,7 +320,7 @@ void showhelp() {
          << endl;
     cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2"
          << endl;
-    cout << "\tdir\t\tlist all the file and sub directory information\tdir  "
+    cout << "\tdir\t\tlist all the file and sub directory information\tdir "
             "dirPath"
          << endl;
     cout << "\tcp\t\tcopy a file\t\t\t\t\tcp file1 file2" << endl;
@@ -330,21 +338,17 @@ void createRoot() {
     strcpy(disk[1].super_block->usrdir, disk[p].Dire_Block->name);
 }
 
-void format() {
+void system_boot() {
     disk = new DISK[16 * 1024];
+
+    // 初始化登录者信息
     disk[0].boot_block = new BOOT_BLOCK;
     disk[0].boot_block->user_sum = 1;
     disk[0].boot_block->current_user = 0;
     strcpy(disk[0].boot_block->user_inf[0].user_id, "admin");
-    strcpy(disk[0].boot_block->user_inf[0].pass_word,
-           "admin");  //在boot_block中初始化管理员信息；
-    strcpy(disk[0].boot_block->user_inf[1].user_id, "user1");
-    strcpy(disk[0].boot_block->user_inf[1].pass_word,
-           "user1");  //在boot_block中初始化用户信息；
-    strcpy(disk[0].boot_block->user_inf[2].user_id, "user2");
-    strcpy(disk[0].boot_block->user_inf[2].pass_word,
-           "user2");  //在boot_block中初始化用户信息；
+    strcpy(disk[0].boot_block->user_inf[0].pass_word,"admin");  //在boot_block中初始化管理员信息；
 
+    // 初始化super_block
     disk[1].super_block = new SUPER_BLOCK;
     disk[1].super_block->free_inode = 1638;
     disk[1].super_block->free_data_block = 16194;
@@ -355,15 +359,22 @@ void format() {
     disk[1].super_block->first_inode_block = 4;
     disk[1].super_block->last_inode_block = 1641;
     disk[1].super_block->first_data_block = 1642;
+    strcpy(disk[1].super_block->cwdir, "/root");
+    strcpy(disk[1].super_block->usrdir, "/root");
+
+    // 初始化i_node_bit_map
     disk[2].i_node_bit_map = new INODE_BIT_MAP;
-    memset(disk[2].i_node_bit_map->inode_bit_map, 0,
-           sizeof(disk[2].i_node_bit_map->inode_bit_map));
+    memset(disk[2].i_node_bit_map->inode_bit_map, 0, sizeof(disk[2].i_node_bit_map->inode_bit_map));
+
+    // 初始化data_bit_map
     disk[3].data_bit_map = new DATA_BIT_MAP;
-    memset(disk[3].data_bit_map->data_bit_map, 0,
-           sizeof(disk[3].data_bit_map->data_bit_map));
+    memset(disk[3].data_bit_map->data_bit_map, 0, sizeof(disk[3].data_bit_map->data_bit_map));
+
+    // 初始化i_node
     for (int i = 4; i < systemUsed; i++) {
         disk[i].i_node = new I_NODE;
     }
+    // 初始化i_node_bit_map
     disk[1].i_node_bit_map = new INODE_BIT_MAP;
     createRoot();  //程序启动创建根文件夹。
 }
@@ -675,50 +686,14 @@ void changeDir(char* dir) {
         cout << "Directory doesn't exist" << endl;
 }
 
-void login(bool& flag) {
-    cout << "Login..................." << endl
-         << "ID:admin,Password:admin;  " << endl
-         << "ID:user1, Password : user1; " << endl
-         << "ID:user1, Password : user2." << endl;
-    cout << "User name : ";
-    char user[1024];
-    char password[1024];
-    cin >> user;
-    cout << "Password : ";
-    cin >> password;
-    for (int i = 0; i < 3; i++) {
-        if (strcmp(disk[0].boot_block->user_inf[i].user_id, user) == 0 &&
-            strcmp(disk[0].boot_block->user_inf[i].pass_word, password) == 0) {
-            disk[0].boot_block->current_user = i;
-            system("cls");
-            cout << "Login successful!" << endl;
-            if (i > 0) {
-                char temp[1024] = {"/root/"};
-                strcat(temp, user);
-                strcpy(disk[1].super_block->usrdir, temp);
-                strcpy(disk[1].super_block->cwdir, disk[1].super_block->usrdir);
-                createDirectory(temp);
-                strcpy(temp, disk[1].super_block->cwdir);
-                strcat(temp, "/share");
-                createDirectory(temp);
-            } else {
-                strcpy(disk[1].super_block->cwdir, "/root");
-                strcpy(disk[1].super_block->usrdir, "/root");
-            }
-            showhelp();
-            flag = false;
-            return;
-        }
-    }
-    cout << "Login denied" << endl;
+void showWelcomeMsg() {
+    cout << "welcome to login our simple file system" << endl;
+    cout << "@copyright: 201830570453 Yunhui Zhang, 201830570460 Ziyang Zhou" << endl << endl;
 }
 
 void cmdF(bool& flag) {
     char cmd[1024];
-    cout << disk[0]
-                .boot_block->user_inf[disk[0].boot_block->current_user]
-                .user_id
-         << "@ " << disk[1].super_block->cwdir << ">";
+    cout << disk[1].super_block->cwdir << ">";
     cin.sync();
     cin >> cmd;
 
@@ -814,20 +789,12 @@ void cmdF(bool& flag) {
 }
 
 int main() {
-    format();
+    system_boot();
+    showWelcomeMsg();
+    showhelp();
 
-    char* content = new char[1024];
-    strcpy(content, "this is file1");
-    createFile("/root/dir1/file1", 1024, content);
-    char* content1 = new char[1024];
-    strcpy(content1, "this is file2");
-    createFile("/root/dir1/dir2/file2", 1024, content1);
-
-    bool flag = true;
-    while (flag)
-        login(flag);
-    flag = true;
-    while (flag)
-        cmdF(flag);
+    bool mainLoop = true;
+    while (mainLoop)
+        cmdF(mainLoop);
     return 0;
 }
