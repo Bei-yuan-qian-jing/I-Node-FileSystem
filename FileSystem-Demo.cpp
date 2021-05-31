@@ -302,12 +302,19 @@ void dirFix(char* dir) {
 
 void showhelp() {
     cout << "\thelp\t\tshow help information\t\t\t\tinstruction format" << endl;
-    cout << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize"<< endl;
+    cout
+        << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize"
+        << endl;
     cout << "\tdeleteFile\tdelete a file\t\t\t\t\tdeleteFile filePath" << endl;
-    cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1" << endl;
-    cout << "\tdeleteDir\tdelete a directory\t\t\t\tdeleteDir /dir1/sub1" << endl;
-    cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2" << endl;
-    cout << "\tdir\t\tlist all the file and sub directory information\tdir  dirPath"<< endl;
+    cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1"
+         << endl;
+    cout << "\tdeleteDir\tdelete a directory\t\t\t\tdeleteDir /dir1/sub1"
+         << endl;
+    cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2"
+         << endl;
+    cout << "\tdir\t\tlist all the file and sub directory information\tdir  "
+            "dirPath"
+         << endl;
     cout << "\tcp\t\tcopy a file\t\t\t\t\tcp file1 file2" << endl;
     cout << "\tsum\t\tdisplay the usage of storage space" << endl;
     cout << "\tcat\t\tprint out the file contents\t\t\tcat /dir1/file1" << endl;
@@ -329,11 +336,14 @@ void format() {
     disk[0].boot_block->user_sum = 1;
     disk[0].boot_block->current_user = 0;
     strcpy(disk[0].boot_block->user_inf[0].user_id, "admin");
-    strcpy(disk[0].boot_block->user_inf[0].pass_word, "admin");  //在boot_block中初始化管理员信息；
+    strcpy(disk[0].boot_block->user_inf[0].pass_word,
+           "admin");  //在boot_block中初始化管理员信息；
     strcpy(disk[0].boot_block->user_inf[1].user_id, "user1");
-    strcpy(disk[0].boot_block->user_inf[1].pass_word, "user1");  //在boot_block中初始化用户信息；
+    strcpy(disk[0].boot_block->user_inf[1].pass_word,
+           "user1");  //在boot_block中初始化用户信息；
     strcpy(disk[0].boot_block->user_inf[2].user_id, "user2");
-    strcpy(disk[0].boot_block->user_inf[2].pass_word, "user2");  //在boot_block中初始化用户信息；
+    strcpy(disk[0].boot_block->user_inf[2].pass_word,
+           "user2");  //在boot_block中初始化用户信息；
 
     disk[1].super_block = new SUPER_BLOCK;
     disk[1].super_block->free_inode = 1638;
@@ -346,9 +356,11 @@ void format() {
     disk[1].super_block->last_inode_block = 1641;
     disk[1].super_block->first_data_block = 1642;
     disk[2].i_node_bit_map = new INODE_BIT_MAP;
-    memset(disk[2].i_node_bit_map->inode_bit_map, 0, sizeof(disk[2].i_node_bit_map->inode_bit_map));
+    memset(disk[2].i_node_bit_map->inode_bit_map, 0,
+           sizeof(disk[2].i_node_bit_map->inode_bit_map));
     disk[3].data_bit_map = new DATA_BIT_MAP;
-    memset(disk[3].data_bit_map->data_bit_map, 0, sizeof(disk[3].data_bit_map->data_bit_map));
+    memset(disk[3].data_bit_map->data_bit_map, 0,
+           sizeof(disk[3].data_bit_map->data_bit_map));
     for (int i = 4; i < systemUsed; i++) {
         disk[i].i_node = new I_NODE;
     }
