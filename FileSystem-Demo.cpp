@@ -6,9 +6,6 @@
 #include "ModelDefinition.h"
 using namespace std;
 
-/*############################################*/
-// help function!
-// return file's inode
 int findFileINode(long p, char name[]) {
     int pointer = -1;
     time_t ti;
@@ -271,7 +268,7 @@ int searchDir(char* dir) {
     return pointer;
 }
 
-void dirFix(char* dir) {
+void fixDirPath(char* dir) {
     if (strchr(dir, '/') == NULL) {
         char temp[1024];
         strcpy(temp, dir);
@@ -341,6 +338,7 @@ void systemBoot() {
     for (int i = 4; i < systemUsed; i++) {
         disk[i].i_node = new I_NODE;
     }
+
     // 初始化i_node_bit_map
     disk[1].i_node_bit_map = new INODE_BIT_MAP;
     createRoot();  //程序启动创建根文件夹。
@@ -348,9 +346,8 @@ void systemBoot() {
 
 int createDirectory(char dir[]) {
     int pointer = -1;
-    if (strstr(dir, disk[1].super_block->usrdir) !=
-        NULL)  //如果是在当前用户的目录下创建新路径，则请求被允许
-    {
+    //如果是在当前用户的目录下创建新路径，则请求被允许
+    if (strstr(dir, disk[1].super_block->usrdir) !=  NULL) {
         char* token = strtok(dir, "/");
         long p = disk[1].super_block->first_data_block;
         token = strtok(NULL, "/");
@@ -463,10 +460,11 @@ void deleteFile(char* name) {
         cout << "not such a directory" << endl;
         return;
     }
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++) {
         if (strcmp(disk[tp].Dire_Block->directory[i].name, filename) == 0) {
             deleteFileHelp(tp, i);
         }
+    }
 }
 
 bool deleteDir(char* dir) {
@@ -529,7 +527,6 @@ bool deleteDir(char* dir) {
         cout << "can't no delete locked file" << endl;
         return false;
     }
-
     return flag;
 }
 
@@ -567,7 +564,7 @@ void listFile(char* dir) {
     }
 }
 
-void cpyFile(char* obj, char* dest) {
+void copyFile(char* obj, char* dest) {
     int p;
     if ((p = searchFile(obj)) == -1) {
         cout << "Source file doesn't exist in this directory!" << endl;
@@ -641,7 +638,7 @@ void showWelcomeMsg() {
     cout << "@copyright: 201830570453 Yunhui Zhang, 201830570460 Ziyang Zhou" << endl << endl;
 }
 
-void cmdF(bool& flag) {
+void receiveCMD(bool& flag) {
     char cmd[1024];
     cout << disk[1].super_block->cwdir << ">";
     cin.sync();
@@ -652,13 +649,13 @@ void cmdF(bool& flag) {
         memset(filename, 0, sizeof(filename));
         int size = 0;
         cin >> filename >> size;
-        dirFix(filename);
+        fixDirPath(filename);
         if (size >= disk[1].super_block->free_data_block * 1024) {
             cout << "error:file size greater available space" << endl;
             return;
         }
         cin.sync();  //清空输入缓存；
-        cout << "please input the content" << endl;
+        cout << "please input the content of the file:" << endl;
         int count = 0;
         char* buff = new char[size];
         memset(buff, 0, size);
@@ -680,7 +677,7 @@ void cmdF(bool& flag) {
         char filename[1024];
         memset(filename, 0, sizeof(filename));
         cin >> filename;
-        dirFix(filename);
+        fixDirPath(filename);
         deleteFile(filename);
     }
 
@@ -688,7 +685,7 @@ void cmdF(bool& flag) {
         char dir[1024];
         memset(dir, 0, sizeof(dir));
         cin >> dir;
-        dirFix(dir);
+        fixDirPath(dir);
         createDirectory(dir);
     }
 
@@ -696,7 +693,7 @@ void cmdF(bool& flag) {
         char dir[1024];
         memset(dir, 0, sizeof(dir));
         cin >> dir;
-        dirFix(dir);
+        fixDirPath(dir);
         deleteDir(dir);
     }
 
@@ -717,8 +714,8 @@ void cmdF(bool& flag) {
         char dest[1024];
         char sour[1024];
         cin >> sour >> dest;
-        dirFix(sour);
-        cpyFile(sour, dest);
+        fixDirPath(sour);
+        copyFile(sour, dest);
     }
 
     if (strcmp(cmd, "sum") == 0) {
@@ -729,7 +726,7 @@ void cmdF(bool& flag) {
         char filename[1024];
         memset(filename, 0, sizeof(filename));
         cin >> filename;
-        dirFix(filename);
+        fixDirPath(filename);
         cat(filename);
     }
 
@@ -745,6 +742,6 @@ int main() {
 
     bool mainLoop = true;
     while (mainLoop) {
-        cmdF(mainLoop);
+        receiveCMD(mainLoop);
     }
 }
