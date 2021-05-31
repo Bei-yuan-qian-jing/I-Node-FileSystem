@@ -9,7 +9,7 @@ using namespace std;
 /*############################################*/
 // help function!
 // return file's inode
-int findFile_INode(long p, char name[]) {
+int findFileINode(long p, char name[]) {
     int pointer = -1;
     time_t ti;
     for (int i = 0; i < 50; i++) {
@@ -60,8 +60,7 @@ INDIRECT_ADDR_BLOCK* newINDIR_Addr() {
 void assign_INode(int I) {
     time_t t;
     time(&t);
-    disk[I].i_node->create_time = disk[I].i_node->access_time = disk[I].i_node->modification_time = t;
-    disk[I].i_node->uid = disk[0].boot_block->current_user;
+    disk[I].i_node->create_time = disk[I].i_node->access_time = t;
     disk[I].i_node->current_size = 0;
     for (int i = 0; i < 10; i++) {
         disk[I].i_node->direct_addr[i] = 0;
@@ -245,7 +244,7 @@ int searchFile(char* filename) {
     token = strtok(NULL, "/");
     int tp;
     while (token != NULL) {
-        if ((tp = findFile_INode(p, token)) == -1)
+        if ((tp = findFileINode(p, token)) == -1)
             return pointer;
         p = disk[tp].i_node->direct_addr[0];
         token = strtok(NULL, "/");
@@ -262,7 +261,7 @@ int searchDir(char* dir) {
     sub = strtok(NULL, "/");
     int tp;
     while (sub != NULL) {
-        if ((tp = findFile_INode(p, sub)) == -1)
+        if ((tp = findFileINode(p, sub)) == -1)
             return pointer;
         p = disk[tp].i_node->direct_addr[0];  //获取下一级目录的地址
 
@@ -313,16 +312,9 @@ void createRoot() {
     strcpy(disk[1].super_block->usrdir, disk[p].Dire_Block->name);
 }
 
-void system_boot() {
+void systemBoot() {
     disk = new DISK[16 * 1024];
-
-    // 初始化登录者信息
-    disk[0].boot_block = new BOOT_BLOCK;
-    disk[0].boot_block->user_sum = 1;
-    disk[0].boot_block->current_user = 0;
-    strcpy(disk[0].boot_block->user_inf[0].user_id, "admin");
-    strcpy(disk[0].boot_block->user_inf[0].pass_word,"admin");  //在boot_block中初始化管理员信息；
-
+    
     // 初始化super_block
     disk[1].super_block = new SUPER_BLOCK;
     disk[1].super_block->free_inode = 1638;
@@ -363,20 +355,16 @@ int createDirectory(char dir[]) {
         long p = disk[1].super_block->first_data_block;
         token = strtok(NULL, "/");
         int tp;
-        int ltp = 0;
         while (token != NULL) {
-            if ((tp = findFile_INode(p, token)) ==
+            if ((tp = findFileINode(p, token)) ==
                 -1)  //看看是否找到与token对应的inode
             {
                 make_Dir(p, token);  //如果没有找到则在该级路径想创建新的文件夹
                 time_t ti;
                 time(&ti);
-                if (ltp != 0)
-                    disk[ltp].i_node->modification_time = ti;
             } else  //如果已经找到
             {
                 p = disk[tp].i_node->direct_addr[0];  //通过inode访问下一级路径
-                ltp = tp;
             }
             token = strtok(NULL, "/");
         };
@@ -402,11 +390,8 @@ void createFile(char* name, int size, char* filecontent) {
         cout << "Directory creating denied" << endl;
     } else {
         for (int i = 0; i < 50; i++)
-            if (strcmp(disk[pointer].Dire_Block->directory[i].name, filename) ==
-                0) {
-                cout << "Same file name in the directory，would you like to "
-                        "replace it<y/n>"
-                     << endl;
+            if (strcmp(disk[pointer].Dire_Block->directory[i].name, filename) == 0) {
+                cout << "Same file name in the directory，would you like to replace it<y/n>" << endl;
                 char n;
                 cin >> n;
                 if (n == 'n')
@@ -563,10 +548,6 @@ void listFile(char* dir) {
         if (strlen(disk[p].Dire_Block->directory[i].name) > 0) {
             int inode = disk[p].Dire_Block->directory[i].inode_number;
             cout << "Name : " << disk[p].Dire_Block->directory[i].name << endl;
-            cout
-                << "Owner : "
-                << disk[0].boot_block->user_inf[disk[inode].i_node->uid].user_id
-                << endl;
             if (disk[inode].i_node->type == 0) {
                 cout << "Data type : directory" << endl;
                 cout << "Size : 1KB" << endl;
@@ -581,8 +562,6 @@ void listFile(char* dir) {
             cout << "Create time : " << ctime(&disk[inode].i_node->create_time);
             cout << "Last access time : "
                  << ctime(&disk[inode].i_node->access_time);
-            cout << "Last modification time : "
-                 << ctime(&disk[inode].i_node->modification_time);
             cout << "#################################################" << endl;
         }
     }
@@ -760,12 +739,12 @@ void cmdF(bool& flag) {
 }
 
 int main() {
-    system_boot();
+    systemBoot();
     showWelcomeMsg();
     showhelp();
 
     bool mainLoop = true;
-    while (mainLoop)
+    while (mainLoop) {
         cmdF(mainLoop);
-    return 0;
+    }
 }

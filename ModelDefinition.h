@@ -7,17 +7,6 @@
 #define MAX_BLOCK 16 * 1024; //block的总数目
 int systemUsed = 1642;
 
-struct USER_INF {
-	char user_id[22];
-	char pass_word[20];
-};
-
-struct BOOT_BLOCK {
-	USER_INF user_inf[3];
-	int user_sum;
-	int current_user;
-};
-
 struct SUPER_BLOCK {
 	int free_inode;
 	int free_data_block;
@@ -33,10 +22,8 @@ struct SUPER_BLOCK {
 };
 
 struct I_NODE {
-	int uid;
 	int type;			//0 is directory ,1 is data;
 	time_t create_time;
-	time_t modification_time;
 	time_t access_time;
 	int current_size;
 	int max_size;
@@ -72,7 +59,6 @@ struct DIRECTORY_BLOCK {
 };
 
 struct DISK {
-	BOOT_BLOCK *boot_block;
 	SUPER_BLOCK *super_block;
 	INODE_BIT_MAP *i_node_bit_map;
 	DATA_BIT_MAP *data_bit_map;
