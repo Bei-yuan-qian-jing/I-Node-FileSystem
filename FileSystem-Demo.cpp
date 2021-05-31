@@ -866,13 +866,15 @@ void share(char *dest, char *orig)
 	}
 	disk[inode].i_node->shareDir = p1;
 }
+
 void cmdF(bool &flag)
 {
 	char cmd[1024];
 	cout << disk[0].boot_block->user_inf[disk[0].boot_block->current_user].user_id << "@ " << disk[1].super_block->cwdir << ">";
 	cin.sync();
 	cin >> cmd;
-	if (strcmp(cmd, "createF") == 0)
+
+	if (strcmp(cmd, "createFile") == 0)
 	{
 		char filename[1024];
 		memset(filename, 0, sizeof(filename));
@@ -905,6 +907,62 @@ void cmdF(bool &flag)
 		cin.sync();
 	}
 
+	if (strcmp(cmd, "deleteFile") == 0)
+	{
+		char filename[1024];
+		memset(filename, 0, sizeof(filename));
+		cin >> filename;
+		dirFix(filename);
+		deleteFile(filename);
+	}
+
+	if (strcmp(cmd, "createDir") == 0)
+	{
+		char dir[1024];
+		memset(dir, 0, sizeof(dir));
+		cin >> dir;
+		dirFix(dir);
+		createDirectory(dir);
+	}
+
+	if (strcmp(cmd, "deleteDir") == 0)
+	{
+		char dir[1024];
+		memset(dir, 0, sizeof(dir));
+		cin >> dir;
+		dirFix(dir);
+		deleteDir(dir);
+	}
+
+	if (strcmp(cmd, "changeDir") == 0)
+	{
+		char dir[1024];
+		cin >> dir;
+		changeDir(dir);
+	}
+
+	if (strcmp(cmd, "dir") == 0)
+	{
+		char dir[1024];
+		memset(dir, 0, sizeof(dir));
+		cin >> dir;
+		listFile(dir);
+	}
+
+	if (strcmp(cmd, "cp") == 0)
+	{
+		char dest[1024];
+		char sour[1024];
+		cin >> sour >> dest;
+		dirFix(sour);
+		cpyFile(sour, dest);
+	}
+
+	if (strcmp(cmd, "sum") == 0)
+	{
+		sum();
+	}
+
 	if (strcmp(cmd, "cat") == 0)
 	{
 		char filename[1024];
@@ -914,120 +972,72 @@ void cmdF(bool &flag)
 		cat(filename);
 	}
 
-	if (strcmp(cmd, "editF") == 0)
-	{
-		char filename[1024];
-		memset(filename, 0, sizeof(filename));
-		cin >> filename;
-		dirFix(filename);
-		cin.sync(); //清空输入缓存；
-		cout << "please input the new content" << endl;
-		int count = 0;
-		char *buff = new char[1024];
-		memset(buff, 0, 1024);
-		while (cin.get(buff[count]))
-		{
-			if (buff[count] == '\n')
-				break;
-			count++;
-			if (count == 1024 - 1)
-			{
-				cout << "can not over the largest file size" << endl;
-				break;
-			}
-		}
-		editFile(filename, buff);
-		cin.sync();
-	}
-
-	if (strcmp(cmd, "deleteF") == 0)
-	{
-		char filename[1024];
-		memset(filename, 0, sizeof(filename));
-		cin >> filename;
-		dirFix(filename);
-		deleteFile(filename);
-	}
-
-	if (strcmp(cmd, "deleteD") == 0)
-	{
-		char dir[1024];
-		memset(dir, 0, sizeof(dir));
-		cin >> dir;
-		dirFix(dir);
-		deleteDir(dir);
-	}
-
-	if (strcmp(cmd, "createD") == 0)
-	{
-		char dir[1024];
-		memset(dir, 0, sizeof(dir));
-		cin >> dir;
-		dirFix(dir);
-		createDirectory(dir);
-	}
-	if (strcmp(cmd, "listF") == 0)
-	{
-		char dir[1024];
-		memset(dir, 0, sizeof(dir));
-		cin >> dir;
-		listFile(dir);
-	}
-	if (strcmp(cmd, "cpyF") == 0)
-	{
-		char dest[1024];
-		char sour[1024];
-		cin >> sour >> dest;
-		dirFix(sour);
-		cpyFile(sour, dest);
-	}
-	if (strcmp(cmd, "share") == 0)
-	{
-		char dest[1024];
-		char orig[1024];
-		cin >> orig >> dest;
-		dirFix(orig);
-		share(dest, orig);
-	}
-
-	if (strcmp(cmd, "sum") == 0)
-	{
-		sum();
-	}
-	if (strcmp(cmd, "cd") == 0)
-	{
-		char dir[1024];
-		cin >> dir;
-		changeDir(dir);
-	}
-	if (strcmp(cmd, "changeS") == 0)
-	{
-		char dir[1024];
-		char lock[10];
-		cin >> dir >> lock;
-		dirFix(dir);
-		if (!changeState(lock, dir))
-			cout << "illegal command" << endl;
-	}
-	if (strcmp(cmd, "readOnly") == 0)
-	{
-		char dir[1024];
-		char lock[10];
-		cin >> dir >> lock;
-		dirFix(dir);
-		if (!readOnly(lock, dir))
-			cout << "illegal command" << endl;
-	}
-	if (strcmp(cmd, "logout") == 0)
-	{
-		bool flag1 = true;
-		while (flag1)
-			login(flag1);
-	}
 	if (strcmp(cmd, "exit") == 0)
 	{
 		flag = false;
 	}
+	
+	// if (strcmp(cmd, "editF") == 0)
+	// {
+	// 	char filename[1024];
+	// 	memset(filename, 0, sizeof(filename));
+	// 	cin >> filename;
+	// 	dirFix(filename);
+	// 	cin.sync(); //清空输入缓存；
+	// 	cout << "please input the new content" << endl;
+	// 	int count = 0;
+	// 	char *buff = new char[1024];
+	// 	memset(buff, 0, 1024);
+	// 	while (cin.get(buff[count]))
+	// 	{
+	// 		if (buff[count] == '\n')
+	// 			break;
+	// 		count++;
+	// 		if (count == 1024 - 1)
+	// 		{
+	// 			cout << "can not over the largest file size" << endl;
+	// 			break;
+	// 		}
+	// 	}
+	// 	editFile(filename, buff);
+	// 	cin.sync();
+	// }
+
+	// if (strcmp(cmd, "share") == 0)
+	// {
+	// 	char dest[1024];
+	// 	char orig[1024];
+	// 	cin >> orig >> dest;
+	// 	dirFix(orig);
+	// 	share(dest, orig);
+	// }
+
+	// if (strcmp(cmd, "changeS") == 0)
+	// {
+	// 	char dir[1024];
+	// 	char lock[10];
+	// 	cin >> dir >> lock;
+	// 	dirFix(dir);
+	// 	if (!changeState(lock, dir))
+	// 		cout << "illegal command" << endl;
+	// }
+
+	// if (strcmp(cmd, "readOnly") == 0)
+	// {
+	// 	char dir[1024];
+	// 	char lock[10];
+	// 	cin >> dir >> lock;
+	// 	dirFix(dir);
+	// 	if (!readOnly(lock, dir))
+	// 		cout << "illegal command" << endl;
+	// }
+
+	// if (strcmp(cmd, "logout") == 0)
+	// {
+	// 	bool flag1 = true;
+	// 	while (flag1)
+	// 		login(flag1);
+	// }
 }
 
 int main()
@@ -1052,20 +1062,20 @@ int main()
 }
 void showhelp()
 {
-	cout << "\thelp\t\tshow help infor" << endl;
-	cout << "\tshare\t\tshare file to other user" << endl;
-	cout << "\tcreateF\t\tcreate a new file" << endl;
-	cout << "\tcat\t\topen a file" << endl;
-	cout << "\tdeleteF\t\tdelete a file" << endl;
-	cout << "\teditF\t\tedit file" << endl;
-	cout << "\treadOnly\tset the file as read only flag ,r or rw " << endl;
-	cout << "\tcreateD\t\tcreate a new directory" << endl;
-	cout << "\tdeleteD\t\tdelete a directory" << endl;
-	cout << "\tlistF\t\tlist all the file and sub directory information" << endl;
-	cout << "\tcpyF\t\tcopy a file to other directory" << endl;
-	cout << "\tsum\t\tshow the usage of space" << endl;
-	cout << "\tcd\t\tchange the current working directory" << endl;
-	cout << "\tchangeS\t\tchange the lock state l for lock ,ul for unlock" << endl;
-	cout << "\tlogout\t\tlogout" << endl;
-	cout << "\texit\t\texit" << endl;
+	cout << "\thelp\t\tshow help information\t\t\t\tinstruction format" << endl;
+	cout << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize" << endl;
+	cout << "\tdeleteFile\tdelete a file\t\t\t\t\tdeleteFile filePath" << endl;
+	cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1" << endl;
+	cout << "\tdeleteDir\tdelete a directory\t\t\t\tdeleteDir /dir1/sub1" << endl;
+	cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2" << endl;
+	cout << "\tdir\t\tlist all the file and sub directory information\tdir dirPath" << endl;
+	cout << "\tcp\t\tcopy a file\t\t\t\t\tcp file1 file2" << endl;
+	cout << "\tsum\t\tdisplay the usage of storage space" << endl;
+	cout << "\tcat\t\tprint out the file contents\t\t\tcat /dir1/file1" << endl;
+	cout << "\texit\t\texit the fileSystem" << endl;
+
+	// cout << "\teditF\t\tedit file" << endl;
+	// cout << "\treadOnly\tset the file as read only flag ,r or rw " << endl;
+	// cout << "\tchangeS\t\tchange the lock state l for lock ,ul for unlock" << endl;
+	// cout << "\tlogout\t\tlogout" << endl;
 };
