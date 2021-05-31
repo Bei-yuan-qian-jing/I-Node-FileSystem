@@ -60,17 +60,15 @@ INDIRECT_ADDR_BLOCK* newINDIR_Addr() {
 void assign_INode(int I) {
     time_t t;
     time(&t);
-    disk[I].i_node->create_time = disk[I].i_node->access_time =
-        disk[I].i_node->modification_time = t;
+    disk[I].i_node->create_time = disk[I].i_node->access_time = disk[I].i_node->modification_time = t;
     disk[I].i_node->uid = disk[0].boot_block->current_user;
     disk[I].i_node->current_size = 0;
-    disk[I].i_node->lock = 0;
-    disk[I].i_node->shareDir = 0;
-    disk[I].i_node->read_only_flag = 0;
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++) {
         disk[I].i_node->direct_addr[i] = 0;
-    for (int i = 0; i < 2; i++)
+    }
+    for (int i = 0; i < 2; i++) {
         disk[I].i_node->indirect_addr[i] = 0;
+    }
 }
 
 void make_Dir(long& p, char* token) {
@@ -81,15 +79,10 @@ void make_Dir(long& p, char* token) {
             disk[p].Dire_Block->directory[i].inode_number = Inode;
             assign_INode(Inode);  // request inode for new directory
             disk[Inode].i_node->type = 0;
-            disk[2].i_node_bit_map->inode_bit_map
-                [Inode - disk[1].super_block->first_inode_block] = true;
-
-            int data_p =
-                findFreeDataBlock();  // request data block for new directory
+            disk[2].i_node_bit_map->inode_bit_map[Inode - disk[1].super_block->first_inode_block] = true;
+            int data_p = findFreeDataBlock();  // request data block for new directory
             disk[1].super_block->free_data_block--;
-            disk[Inode]
-                .i_node->direct_addr[disk[Inode].i_node->current_size++] =
-                data_p;
+            disk[Inode].i_node->direct_addr[disk[Inode].i_node->current_size++] = data_p;
             disk[data_p].Dire_Block = newDirectory();
             disk[3].data_bit_map->data_bit_map[data_p - systemUsed] = true;
             strcpy(disk[data_p].Dire_Block->name, token);
@@ -100,10 +93,7 @@ void make_Dir(long& p, char* token) {
     }
 }
 
-void make_inDir(INDIRECT_ADDR_BLOCK* p,
-                char* filecontent,
-                int& totalBlocks,
-                int& used_Blocks) {
+void make_inDir(INDIRECT_ADDR_BLOCK* p, char* filecontent, int& totalBlocks, int& used_Blocks) {
     int count = totalBlocks < 256 ? totalBlocks : 256;
     int temp;
     for (int i = 0; i < count; i++) {
@@ -194,25 +184,10 @@ void make_File(int& p, char* token, double size, char* filecontent) {
 
 bool deleteFileHelp(int& p, int i) {
     int inode;
-    inode = disk[p].Dire_Block->directory[i].inode_number;  // get the I_node of
-                                                            // the file
-    if (disk[inode].i_node->lock == 1)  // check wheter the file is locked
-    {
-        cout << disk[p].Dire_Block->directory[i].name
-             << " is locked ,permission denied" << endl;
-        return false;
-    }
+    inode = disk[p].Dire_Block->directory[i].inode_number;  // get the I_node of the file
+
     strcpy(disk[p].Dire_Block->directory[i].name, "");
     disk[p].Dire_Block->directory[i].inode_number = 0;  //在目录上清除
-
-    if (disk[inode].i_node->shareDir != 0)  // delete soft link
-    {
-        int p = disk[inode].i_node->shareDir;
-        int o = disk[inode].i_node->shareOffset;
-        strcpy(disk[p].Dire_Block->directory[o].name, "");
-        disk[p].Dire_Block->directory[o].inode_number = 0;
-        return true;
-    }
 
     int tp;  // delete data
     for (int i = 0; i < 10; i++) {
@@ -602,10 +577,6 @@ void listFile(char* dir) {
                 cout << "Max size : " << disk[inode].i_node->max_size << "Bytes"
                      << endl;
                 cout << "Lock state : ";
-                if (disk[inode].i_node->lock == 1)
-                    cout << "Locked" << endl;
-                else
-                    cout << "Unlocked" << endl;
             }
             cout << "Create time : " << ctime(&disk[inode].i_node->create_time);
             cout << "Last access time : "

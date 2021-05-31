@@ -34,8 +34,6 @@ struct SUPER_BLOCK {
 
 struct I_NODE {
 	int uid;
-	int lock;			//0 can be delete,1can;'t delete
-	int read_only_flag; //0 can be for read and wirte ,1 read only.
 	int type;			//0 is directory ,1 is data;
 	time_t create_time;
 	time_t modification_time;
@@ -44,8 +42,6 @@ struct I_NODE {
 	int max_size;
 	int direct_addr[10];
 	int indirect_addr[2];
-	int shareDir;
-	int shareOffset;
 }; //100bytes
 
 struct DATA_BIT_MAP {
