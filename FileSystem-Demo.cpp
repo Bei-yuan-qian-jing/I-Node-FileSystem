@@ -54,7 +54,7 @@ INDIRECT_ADDR_BLOCK* newINDIR_Addr() {
     return temp;
 }
 
-void assign_INode(int I) {
+void assignINode(int I) {
     time_t t;
     time(&t);
     disk[I].i_node->create_time = disk[I].i_node->access_time = t;
@@ -73,7 +73,7 @@ void make_Dir(long& p, char* token) {
             strcpy(disk[p].Dire_Block->directory[i].name, token);
             int Inode = findFreeINode();
             disk[p].Dire_Block->directory[i].inode_number = Inode;
-            assign_INode(Inode);  // request inode for new directory
+            assignINode(Inode);  // request inode for new directory
             disk[Inode].i_node->type = I_NODE_TYPE_DIR;
             disk[2].i_node_bit_map->inode_bit_map[Inode - disk[1].super_block->first_inode_block] = true;
             int data_p = findFreeDataBlock();  // request data block for new directory
@@ -121,7 +121,7 @@ void make_File(int& p, char* fileName, double size, char* filecontent) {
             }
             // 将此文件的I-Node编号设为返回的free I-Node编号
             disk[p].Dire_Block->directory[i].inode_number = iNodeIndex;
-            assign_INode(iNodeIndex);  // allowcate inode for new directory
+            assignINode(iNodeIndex);  // allowcate inode for new directory
             disk[iNodeIndex].i_node->type = I_NODE_TYPE_FILE;
             int iNodeBitMapOffset = iNodeIndex - disk[1].super_block->first_inode_block;
             disk[2].i_node_bit_map->inode_bit_map[iNodeBitMapOffset] = true;
