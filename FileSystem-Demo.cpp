@@ -9,7 +9,7 @@ using namespace std;
 int findFileINode(long p, char name[]) {
     int pointer = -1;
     time_t ti;
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
         if (strcmp(disk[p].Dire_Block->directory[i].name, name) == 0) {
             pointer = disk[p].Dire_Block->directory[i].inode_number;
             time(&ti);
@@ -42,7 +42,7 @@ int findFreeDataBlock() {
 
 DIRECTORY_BLOCK* newDirectory() {
     DIRECTORY_BLOCK* temp = new DIRECTORY_BLOCK;
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++)
         memset(temp->directory[i].name, 0, 16);
     return temp;
 }
@@ -68,7 +68,7 @@ void assignINode(int I) {
 }
 
 void make_Dir(long& p, char* token) {
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
         if (strlen(disk[p].Dire_Block->directory[i].name) == 0) {
             strcpy(disk[p].Dire_Block->directory[i].name, token);
             int Inode = findFreeINode();
@@ -268,7 +268,6 @@ int searchDir(char* dir) {
         if ((tp = findFileINode(p, sub)) == -1)
             return pointer;
         p = disk[tp].i_node->direct_addr[0];  //获取下一级目录的地址
-
         sub = strtok(NULL, "/");
     }
     pointer = p;
@@ -286,7 +285,8 @@ void fixDirPath(char* dir) {
 }
 
 void showhelp() {
-    cout << "\thelp\t\tshow help information\t\t\t\tinstruction format" << endl;
+    cout << "\thelp\t\tshow help information" << endl;
+    cout << "\tcls\t\tclear the output on terminal" << endl;
     cout << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize" << endl;
     cout << "\tdeleteFile\tdelete a file\t\t\t\t\tdeleteFile filePath" << endl;
     cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1" << endl;
@@ -310,7 +310,6 @@ void createRoot() {
 
 void systemBoot() {
     disk = new DISK[16 * 1024];
-    
     // 初始化super_block
     disk[1].super_block = new SUPER_BLOCK;
     disk[1].super_block->free_inode = 1638;
@@ -412,6 +411,7 @@ void createFile(char* filePath, int size, char* filecontent) {
 void cat(char* filename) {
     int p;
     if (strstr(filename, disk[1].super_block->usrdir) == NULL) {
+        // 文件不在用户根目录下
         cout << "Permission denied" << endl;
         return;
     }
@@ -469,7 +469,7 @@ void deleteFile(char* name) {
         cout << "no such directory" << endl;
         return;
     }
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
         if (strcmp(disk[tp].Dire_Block->directory[i].name, filename) == 0) {
             deleteFileHelp(tp, i);
         }
@@ -491,7 +491,7 @@ bool deleteDir(char* dir) {
         return false;
     }
     bool flag = true;
-    for (int i = 0; i < 50; i++)  // delete file
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++)  // delete file
     {
         if (strlen(disk[p].Dire_Block->directory[i].name) > 0) {
             int inode = disk[p].Dire_Block->directory[i].inode_number;
@@ -518,7 +518,7 @@ bool deleteDir(char* dir) {
         sub1++;
         int tp = searchDir(sub2);
         int tp1;
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
             if (strcmp(sub1, disk[tp].Dire_Block->directory[i].name) == 0) {
                 tp1 = disk[tp].Dire_Block->directory[i].inode_number;
                 strcpy(disk[tp].Dire_Block->directory[i].name, "");
@@ -547,7 +547,7 @@ void listFile(char* dir) {
         return;
     }
     cout << "--------------------------------------------------------------------------------" << endl;
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
         if (strlen(disk[p].Dire_Block->directory[i].name) > 0) {
             int inode = disk[p].Dire_Block->directory[i].inode_number;
             cout << "Name :\t\t\t" << disk[p].Dire_Block->directory[i].name << endl;
@@ -671,6 +671,14 @@ void receiveCMD(bool& flag) {
     cout << disk[1].super_block->cwdir << ">";
     cin.sync();
     cin >> cmd;
+
+    if (strcmp(cmd, "help") == 0) {
+        showhelp();
+    }
+
+    if (strcmp(cmd, "cls") == 0) {
+        system("cls");
+    }
 
     if (strcmp(cmd, "createFile") == 0) {
         receiveCreateFileInput();
