@@ -48,8 +48,7 @@ struct INDIRECT_ADDR_BLOCK {
 
 struct DATA_BLOCK {
 	char content[1024];
-}; //1KB
-//3是databit_map 2是inode_bitmap
+}; 
 
 struct DIRECTORY {
 	long inode_number;

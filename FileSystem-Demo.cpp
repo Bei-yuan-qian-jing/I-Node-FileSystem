@@ -354,8 +354,7 @@ int createDirectory(char dir[]) {
         token = strtok(NULL, "/");
         int tp;
         while (token != NULL) {
-            if ((tp = findFileINode(p, token)) ==
-                -1)  //看看是否找到与token对应的inode
+            if ((tp = findFileINode(p, token)) == -1)  //看看是否找到与token对应的inode
             {
                 make_Dir(p, token);  //如果没有找到则在该级路径想创建新的文件夹
                 time_t ti;
