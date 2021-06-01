@@ -191,7 +191,8 @@ bool deleteFileHelp(int& p, int i) {
     strcpy(disk[p].Dire_Block->directory[i].name, "");
     disk[p].Dire_Block->directory[i].inode_number = 0;  //在目录上清除
 
-    int tp;  // delete data
+    //direct address 上的data_block删除
+    int tp; 
     for (int i = 0; i < 10; i++) {
         tp = (int)disk[inode].i_node->direct_addr[i];
         if (tp == 0)
@@ -201,6 +202,7 @@ bool deleteFileHelp(int& p, int i) {
         disk[1].super_block->free_data_block++;
     }
 
+    // inderect address1 上的data_block删除
     tp = (int)disk[inode].i_node->indirect_addr[0];
     int tp1;
     if (tp != 0) {
@@ -214,6 +216,7 @@ bool deleteFileHelp(int& p, int i) {
         }
     }
 
+    // inderect address2 上的data_block删除
     tp = (int)disk[inode].i_node->indirect_addr[1];
     if (tp != 0) {
         int tp2;
@@ -231,9 +234,7 @@ bool deleteFileHelp(int& p, int i) {
             }
         }
     }
-    disk[2]
-        .i_node_bit_map
-        ->inode_bit_map[inode - disk[1].super_block->first_inode_block] = false;
+    disk[2].i_node_bit_map->inode_bit_map[inode - disk[1].super_block->first_inode_block] = false;
     delete disk[inode].i_node;
     disk[inode].i_node = new I_NODE;
     return true;
@@ -528,12 +529,9 @@ bool deleteDir(char* dir) {
         }
         delete disk[tp1].i_node;
         disk[tp].i_node = new I_NODE;
-        disk[2]
-            .i_node_bit_map
-            ->inode_bit_map[tp - disk[1].super_block->first_inode_block] =
-            false;
+        disk[2].i_node_bit_map->inode_bit_map[tp - disk[1].super_block->first_inode_block] = false;
     } else {
-        cout << "can't no delete locked file" << endl;
+        cout << "failed to delete file" << endl;
         return false;
     }
     return flag;
@@ -546,26 +544,25 @@ void listFile(char* dir) {
     }
     int p;
     if ((p = searchDir(dir)) == -1) {
-        cout << "Directories doesn't exist" << endl;
+        cout << "Dir doesn't exist" << endl;
         return;
     }
-    cout << "#################################################" << endl;
+    cout << "--------------------------------------------------------------------------------" << endl;
     for (int i = 0; i < 50; i++) {
         if (strlen(disk[p].Dire_Block->directory[i].name) > 0) {
             int inode = disk[p].Dire_Block->directory[i].inode_number;
-            cout << "Name : " << disk[p].Dire_Block->directory[i].name << endl;
+            cout << "Name :\t\t\t" << disk[p].Dire_Block->directory[i].name << endl;
             if (disk[inode].i_node->type == I_NODE_TYPE_DIR) {
-                cout << "Data type : directory" << endl;
-                cout << "Size : 1KB" << endl;
+                cout << "Data type :\t\tdirectory" << endl;
+                cout << "Size :\t\t\t1KB" << endl;
             } else {
-                cout << "Data type : user file" << endl;
-                cout << "Current size : " << disk[inode].i_node->current_size << " Bytes" << endl;
-                cout << "Max size : " << disk[inode].i_node->max_size << "Bytes" << endl;
+                cout << "Data type :\t\tuser file" << endl;
+                cout << "Current size :\t\t" << disk[inode].i_node->current_size << " Bytes" << endl;
+                cout << "Max size :\t\t" << disk[inode].i_node->max_size << " Bytes" << endl;
             }
-            cout << "Create time : " << ctime(&disk[inode].i_node->create_time);
-            cout << "Last access time : "
-                 << ctime(&disk[inode].i_node->access_time);
-            cout << "#################################################" << endl;
+            cout << "Create time :\t\t" << ctime(&disk[inode].i_node->create_time);
+            cout << "Last access time :\t" << ctime(&disk[inode].i_node->access_time);
+            cout << "--------------------------------------------------------------------------------" << endl;
         }
     }
 }
