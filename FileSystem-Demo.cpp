@@ -34,7 +34,7 @@ int findFreeDataBlock() {
     int freeDataBlockIndex = 0;
     for (int i = 0; i < disk[1].super_block->total_data_block; i++)
         if (disk[3].data_bit_map->data_bit_map[i] == false) {
-            freeDataBlockIndex = i + systemUsed;
+            freeDataBlockIndex = i + SYSTEM_USED;
             break;
         }
     return freeDataBlockIndex;
@@ -74,13 +74,13 @@ void make_Dir(long& p, char* token) {
             int Inode = findFreeINode();
             disk[p].Dire_Block->directory[i].inode_number = Inode;
             assign_INode(Inode);  // request inode for new directory
-            disk[Inode].i_node->type = 0;
+            disk[Inode].i_node->type = I_NODE_TYPE_DIR;
             disk[2].i_node_bit_map->inode_bit_map[Inode - disk[1].super_block->first_inode_block] = true;
             int data_p = findFreeDataBlock();  // request data block for new directory
             disk[1].super_block->free_data_block--;
             disk[Inode].i_node->direct_addr[disk[Inode].i_node->current_size++] = data_p;
             disk[data_p].Dire_Block = newDirectory();
-            disk[3].data_bit_map->data_bit_map[data_p - systemUsed] = true;
+            disk[3].data_bit_map->data_bit_map[data_p - SYSTEM_USED] = true;
             strcpy(disk[data_p].Dire_Block->name, token);
 
             p = data_p;
@@ -95,7 +95,7 @@ void make_inDir(INDIRECT_ADDR_BLOCK* p, char* filecontent, int& totalBlocks, int
     for (int i = 0; i < count; i++) {
         temp = p->addr[i] = findFreeDataBlock();
         disk[1].super_block->free_data_block--;
-        disk[3].data_bit_map->data_bit_map[temp - systemUsed] = true;
+        disk[3].data_bit_map->data_bit_map[temp - SYSTEM_USED] = true;
         disk[temp].data = new DATA_BLOCK;
         memset(disk[temp].data->content, 0, 1024);
         totalBlocks--;
@@ -108,74 +108,80 @@ void make_inDir(INDIRECT_ADDR_BLOCK* p, char* filecontent, int& totalBlocks, int
     }
 }
 
-void make_File(int& p, char* token, double size, char* filecontent) {
-    int Inode;
-    for (int i = 0; i < 50; i++) {
-        // find the proper palce in directory for the
-        // filename and allowcate inode
+void make_File(int& p, char* fileName, double size, char* filecontent) {
+    int iNodeIndex;
+    for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++) {
+        // 找到当前文件夹下第一个为空的文件名（即第一个未被其他文件占用的位置），并将文件保存在这里
         if (strlen(disk[p].Dire_Block->directory[i].name) == 0) {
-            strcpy(disk[p].Dire_Block->directory[i].name, token);
-            Inode = findFreeINode();
-            if (Inode == -1)  // not free Inode
+            strcpy(disk[p].Dire_Block->directory[i].name, fileName);
+            iNodeIndex = findFreeINode();
+            if (iNodeIndex == -1) {
+                //返回的I-Node不可用
                 return;
-            disk[p].Dire_Block->directory[i].inode_number = Inode;
-            assign_INode(Inode);  // allowcate inode for new directory
-            disk[Inode].i_node->type = 1;
-            disk[2].i_node_bit_map->inode_bit_map
-                [Inode - disk[1].super_block->first_inode_block] = true;
-            p = Inode;
+            }
+            // 将此文件的I-Node编号设为返回的free I-Node编号
+            disk[p].Dire_Block->directory[i].inode_number = iNodeIndex;
+            assign_INode(iNodeIndex);  // allowcate inode for new directory
+            disk[iNodeIndex].i_node->type = I_NODE_TYPE_FILE;
+            int iNodeBitMapOffset = iNodeIndex - disk[1].super_block->first_inode_block;
+            disk[2].i_node_bit_map->inode_bit_map[iNodeBitMapOffset] = true;
+            p = iNodeIndex;
             break;
         }
     }
+    // 文件目前占用的空间
     int usedSpace = disk[p].i_node->current_size = strlen(filecontent);
     disk[p].i_node->max_size = size;
+
+    // 文件目前需要占用的block数
     int used_Blocks = (int)ceil((double)usedSpace / 1024);
+    // 文件最多可以占用的block数(即文件达到maxSize时所占用的block数)
     int totalBlocks = (int)ceil(size / 1024);
     int used_Blocks2 = used_Blocks;
 
-    int count = totalBlocks < 10 ? totalBlocks : 10;
+    int count = totalBlocks < 10 ? totalBlocks : 10; //分配到direct address的block数量
     int temp;
     for (int i = 0; i < count; i++) {
-        temp = disk[Inode].i_node->direct_addr[i] = findFreeDataBlock();
-        disk[3].data_bit_map->data_bit_map[temp - systemUsed] = true;
+        temp = disk[iNodeIndex].i_node->direct_addr[i] = findFreeDataBlock();
+        int dataBitMapOffset = temp - SYSTEM_USED;
+        disk[3].data_bit_map->data_bit_map[dataBitMapOffset] = true;
         disk[temp].data = new DATA_BLOCK;
         memset(disk[temp].data->content, 0, 1024);
         disk[1].super_block->free_data_block--;
         totalBlocks--;
         if (used_Blocks > 0) {
             used_Blocks--;
+            // 从fileContent中拷贝一个字节的字符串到data_block中
             strncpy(disk[temp].data->content, filecontent, 1024);
             filecontent += 1024;
         }
     }
 
-    if (totalBlocks > 0)  //第一级indirect directory;
+    if (totalBlocks > 0)  //第一级indirect address
     {
         int new_p = findFreeDataBlock();  // request data block for new data;
         disk[new_p].in_addr = newINDIR_Addr();
-        disk[Inode].i_node->indirect_addr[0] = new_p;
-        disk[3].data_bit_map->data_bit_map[new_p - systemUsed] = true;
+        disk[iNodeIndex].i_node->indirect_addr[0] = new_p;
+        disk[3].data_bit_map->data_bit_map[new_p - SYSTEM_USED] = true;
         make_inDir(disk[new_p].in_addr, filecontent, totalBlocks, used_Blocks);
     }
     if (totalBlocks > 0)  //第二级indirect address
     {
         int new_p1 = findFreeDataBlock();  // request data block for new data;
         disk[new_p1].in_addr = newINDIR_Addr();
-        disk[Inode].i_node->indirect_addr[1] = new_p1;
-        disk[3].data_bit_map->data_bit_map[new_p1 - systemUsed] = true;
+        disk[iNodeIndex].i_node->indirect_addr[1] = new_p1;
+        disk[3].data_bit_map->data_bit_map[new_p1 - SYSTEM_USED] = true;
         int count = 0;
         while (totalBlocks > 0 && count < 256) {
-            int new_p2 =
-                findFreeDataBlock();  // request data block for new data;
+            int new_p2 = findFreeDataBlock();  // request data block for new data;
             disk[new_p2].in_addr = newINDIR_Addr();
             disk[new_p1].in_addr->addr[count++] = new_p2;
-            disk[3].data_bit_map->data_bit_map[new_p2 - systemUsed] = true;
-            make_inDir(disk[new_p2].in_addr, filecontent, totalBlocks,
-                       used_Blocks);
+            disk[3].data_bit_map->data_bit_map[new_p2 - SYSTEM_USED] = true;
+            make_inDir(disk[new_p2].in_addr, filecontent, totalBlocks,used_Blocks);
         }
     }
     filecontent -= used_Blocks2 * 1024;
-    // delete []filecontent;
+    delete []filecontent;
 }
 
 bool deleteFileHelp(int& p, int i) {
@@ -191,7 +197,7 @@ bool deleteFileHelp(int& p, int i) {
         if (tp == 0)
             break;
         delete disk[tp].data;
-        disk[3].data_bit_map->data_bit_map[tp - systemUsed] = false;
+        disk[3].data_bit_map->data_bit_map[tp - SYSTEM_USED] = false;
         disk[1].super_block->free_data_block++;
     }
 
@@ -203,7 +209,7 @@ bool deleteFileHelp(int& p, int i) {
             if (tp1 == 0)
                 break;
             delete disk[tp1].data;
-            disk[3].data_bit_map->data_bit_map[tp1 - systemUsed] = false;
+            disk[3].data_bit_map->data_bit_map[tp1 - SYSTEM_USED] = false;
             disk[1].super_block->free_data_block++;
         }
     }
@@ -220,7 +226,7 @@ bool deleteFileHelp(int& p, int i) {
                 if (tp2 == 0)
                     break;
                 delete disk[tp2].data;
-                disk[3].data_bit_map->data_bit_map[tp2 - systemUsed] = false;
+                disk[3].data_bit_map->data_bit_map[tp2 - SYSTEM_USED] = false;
                 disk[1].super_block->free_data_block++;
             }
         }
@@ -277,23 +283,15 @@ void fixDirPath(char* dir) {
         strcat(dir, temp);
     }
 }
-/*############################################*/
 
 void showhelp() {
     cout << "\thelp\t\tshow help information\t\t\t\tinstruction format" << endl;
-    cout
-        << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize"
-        << endl;
+    cout << "\tcreateFile\tcreate a new file\t\t\t\tcreateFile filePath fileSize" << endl;
     cout << "\tdeleteFile\tdelete a file\t\t\t\t\tdeleteFile filePath" << endl;
-    cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1"
-         << endl;
-    cout << "\tdeleteDir\tdelete a directory\t\t\t\tdeleteDir /dir1/sub1"
-         << endl;
-    cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2"
-         << endl;
-    cout << "\tdir\t\tlist all the file and sub directory information\tdir "
-            "dirPath"
-         << endl;
+    cout << "\tcreateDir\tcreate a new directory\t\t\t\tcreateDir /dir1/sub1" << endl;
+    cout << "\tdeleteDir\tdelete a directory\t\t\t\tdeleteDir /dir1/sub1" << endl;
+    cout << "\tchangeDir\tchange current working direcotry\t\tchangeDir /dir2" << endl;
+    cout << "\tdir\t\tlist all the file and sub directory information\tdir dirPath" << endl;
     cout << "\tcp\t\tcopy a file\t\t\t\t\tcp file1 file2" << endl;
     cout << "\tsum\t\tdisplay the usage of storage space" << endl;
     cout << "\tcat\t\tprint out the file contents\t\t\tcat /dir1/file1" << endl;
@@ -335,13 +333,15 @@ void systemBoot() {
     memset(disk[3].data_bit_map->data_bit_map, 0, sizeof(disk[3].data_bit_map->data_bit_map));
 
     // 初始化i_node
-    for (int i = 4; i < systemUsed; i++) {
+    for (int i = 4; i < SYSTEM_USED; i++) {
         disk[i].i_node = new I_NODE;
     }
 
     // 初始化i_node_bit_map
     disk[1].i_node_bit_map = new INODE_BIT_MAP;
-    createRoot();  //程序启动创建根文件夹。
+
+    //程序启动创建根文件夹。
+    createRoot(); 
 }
 
 int createDirectory(char dir[]) {
@@ -371,30 +371,39 @@ int createDirectory(char dir[]) {
     return pointer;
 }
 
-void createFile(char* name, int size, char* filecontent) {
-    if (strstr(name, disk[1].super_block->usrdir) == NULL) {
+void createFile(char* filePath, int size, char* filecontent) {
+    // 若当前文件路径不包含用户目录（即所创建的文件必须要在/root/下），则无法创建
+    if (strstr(filePath, disk[1].super_block->usrdir) == NULL) {
         cout << "Permission denied" << endl;
         return;
     }
-    char* filename = strrchr(name, '/');
+    // strrchr() 函数查找字符串在另一个字符串中最后一次出现的位置，并返回从该位置到字符串结尾的所有字符
+    char* filename = strrchr(filePath, '/');
+    // 剔除文件名最开始的'/'
+    filename++;     
+
     char dir[1024];
     memset(dir, 0, sizeof(dir));
-    strncpy(dir, name, strlen(name) - strlen(filename));  //获取文件路径
-    filename++;                                           //获取文件名
+    // 将指定长的字符串从filePath复制到dir，从而获取目录地址
+    strncpy(dir, filePath, strlen(filePath) - strlen(filename) - 1);                                       
 
     int pointer;
+    // 尝试创建文件夹
     if ((pointer = createDirectory(dir)) == -1) {
+        // 创建文件夹失败
         cout << "Directory creating denied" << endl;
     } else {
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < MAX_FILE_NUM_IN_DIR; i++)
             if (strcmp(disk[pointer].Dire_Block->directory[i].name, filename) == 0) {
                 cout << "Same file name in the directory，would you like to replace it<y/n>" << endl;
                 char n;
                 cin >> n;
                 if (n == 'n')
                     return;
-                else if (!deleteFileHelp(pointer, i))
+                else if (!deleteFileHelp(pointer, i)) {
+                    // 删除文件失败
                     return;
+                }
             }
         make_File(pointer, filename, size, filecontent);
     }
@@ -457,7 +466,7 @@ void deleteFile(char* name) {
     filename++;                                           //获取文件名
     int tp;
     if ((tp = searchDir(dir)) == -1) {
-        cout << "not such a directory" << endl;
+        cout << "no such directory" << endl;
         return;
     }
     for (int i = 0; i < 50; i++) {
@@ -500,7 +509,7 @@ bool deleteDir(char* dir) {
     if (flag) {
         delete disk[p].Dire_Block;
         disk[1].super_block->free_data_block++;
-        disk[3].data_bit_map->data_bit_map[p - systemUsed] = false;
+        disk[3].data_bit_map->data_bit_map[p - SYSTEM_USED] = false;
 
         char* sub1 = strrchr(td, '/');
         char sub2[1024];
@@ -545,16 +554,13 @@ void listFile(char* dir) {
         if (strlen(disk[p].Dire_Block->directory[i].name) > 0) {
             int inode = disk[p].Dire_Block->directory[i].inode_number;
             cout << "Name : " << disk[p].Dire_Block->directory[i].name << endl;
-            if (disk[inode].i_node->type == 0) {
+            if (disk[inode].i_node->type == I_NODE_TYPE_DIR) {
                 cout << "Data type : directory" << endl;
                 cout << "Size : 1KB" << endl;
             } else {
                 cout << "Data type : user file" << endl;
-                cout << "Current size : " << disk[inode].i_node->current_size
-                     << " Bytes" << endl;
-                cout << "Max size : " << disk[inode].i_node->max_size << "Bytes"
-                     << endl;
-                cout << "Lock state : ";
+                cout << "Current size : " << disk[inode].i_node->current_size << " Bytes" << endl;
+                cout << "Max size : " << disk[inode].i_node->max_size << "Bytes" << endl;
             }
             cout << "Create time : " << ctime(&disk[inode].i_node->create_time);
             cout << "Last access time : "
@@ -612,12 +618,9 @@ void sum() {
     cout << "system used space : 191kb" << endl;
     cout << "Occupied blocks : "
          << (disk[1].super_block->total_data_block -
-             disk[1].super_block->free_data_block)
-         << endl;
-    cout << "Available blocks : " << disk[1].super_block->free_data_block
-         << endl;
-    cout << "Total blocks for user data : "
-         << disk[1].super_block->total_data_block << endl;
+             disk[1].super_block->free_data_block) << endl;
+    cout << "Available blocks : " << disk[1].super_block->free_data_block << endl;
+    cout << "Total blocks for user data : " << disk[1].super_block->total_data_block << endl;
 }
 
 void changeDir(char* dir) {
@@ -638,6 +641,35 @@ void showWelcomeMsg() {
     cout << "@copyright: 201830570453 Yunhui Zhang, 201830570460 Ziyang Zhou" << endl << endl;
 }
 
+void receiveCreateFileInput() {
+    char filename[1024];
+    memset(filename, 0, sizeof(filename));
+    int size = 0;
+    cin >> filename >> size;
+    fixDirPath(filename);
+    if (size >= disk[1].super_block->free_data_block * 1024) {
+        cout << "error:file size greater available space" << endl;
+        return;
+    }
+    cin.sync();  //清空输入缓存；
+    cout << "please input the content of the file:" << endl;
+    int count = 0;
+    char* buff = new char[size];
+    memset(buff, 0, size);
+    while (cin.get(buff[count])) {
+        if (buff[count] == '\n')
+            break;
+        count++;
+        if (count == size - 1) {
+            cout << "can not over the largest file size" << endl;
+            break;
+        }
+    }
+    buff[count] = '\0';
+    createFile(filename, size, buff);
+    cin.sync();
+}
+
 void receiveCMD(bool& flag) {
     char cmd[1024];
     cout << disk[1].super_block->cwdir << ">";
@@ -645,34 +677,9 @@ void receiveCMD(bool& flag) {
     cin >> cmd;
 
     if (strcmp(cmd, "createFile") == 0) {
-        char filename[1024];
-        memset(filename, 0, sizeof(filename));
-        int size = 0;
-        cin >> filename >> size;
-        fixDirPath(filename);
-        if (size >= disk[1].super_block->free_data_block * 1024) {
-            cout << "error:file size greater available space" << endl;
-            return;
-        }
-        cin.sync();  //清空输入缓存；
-        cout << "please input the content of the file:" << endl;
-        int count = 0;
-        char* buff = new char[size];
-        memset(buff, 0, size);
-        while (cin.get(buff[count])) {
-            if (buff[count] == '\n')
-                break;
-            count++;
-            if (count == size - 1) {
-                cout << "can not over the largest file size" << endl;
-                break;
-            }
-        }
-        buff[count] = '\0';
-        createFile(filename, size, buff);
-        cin.sync();
+        receiveCreateFileInput();
     }
-
+    
     if (strcmp(cmd, "deleteFile") == 0) {
         char filename[1024];
         memset(filename, 0, sizeof(filename));

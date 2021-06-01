@@ -4,8 +4,9 @@
 #include <math.h>
 #include <iomanip>
 
-#define MAX_BLOCK 16 * 1024; //block的总数目
-int systemUsed = 1642;
+#define MAX_BLOCK 16 * 1024 //block的总数目
+#define MAX_FILE_NUM_IN_DIR 50
+#define SYSTEM_USED 1642
 
 struct SUPER_BLOCK {
 	int free_inode;
@@ -21,9 +22,11 @@ struct SUPER_BLOCK {
 	char usrdir[1024];
 };
 
+enum I_NODE_TYPE {I_NODE_TYPE_DIR, I_NODE_TYPE_FILE};
+
 struct I_NODE {
-	int type;			//0 is directory ,1 is data;
-	time_t create_time;
+    I_NODE_TYPE type;  //	0 代表dir, 1代表data
+    time_t create_time;
 	time_t access_time;
 	int current_size;
 	int max_size;
@@ -32,11 +35,11 @@ struct I_NODE {
 }; //100bytes
 
 struct DATA_BIT_MAP {
-	bool data_bit_map[16 * 1024 - 1642];
+	bool data_bit_map[MAX_BLOCK - SYSTEM_USED];
 };
 
 struct INODE_BIT_MAP {
-	bool inode_bit_map[16 * 1024 - 1642];
+	bool inode_bit_map[MAX_BLOCK - SYSTEM_USED];
 };
 
 struct INDIRECT_ADDR_BLOCK {
@@ -55,7 +58,7 @@ struct DIRECTORY {
 
 struct DIRECTORY_BLOCK {
 	char name[16];
-	DIRECTORY directory[50];
+	DIRECTORY directory[MAX_FILE_NUM_IN_DIR];
 };
 
 struct DISK {
